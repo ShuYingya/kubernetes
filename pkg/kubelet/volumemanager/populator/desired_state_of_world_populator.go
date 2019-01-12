@@ -250,6 +250,15 @@ func (dswp *desiredStateOfWorldPopulator) findAndRemoveDeletedPods() {
 			glog.V(4).Infof(volumeToMount.GenerateMsgDetailed("Actual state has not yet has this information skip removing volume from desired state", ""))
 			continue
 		}
+
+		if !dswp.actualStateOfWorld.IsVolumeGloballyMounted(volumeToMount.VolumeName) &&
+			dswp.actualStateOfWorld.IsVolumePluginAttachable(volumeToMount.VolumeName) {
+			glog.V(4).Infof(volumeToMount.GenerateMsgDetailed(
+				"Actual state has the attachable volume information but it hasn't been globally mounted yet. Skip removing volume from desire state",
+				""))
+			continue
+		}
+
 		glog.V(4).Infof(volumeToMount.GenerateMsgDetailed("Removing volume from desired state", ""))
 
 		dswp.desiredStateOfWorld.DeletePodFromVolume(

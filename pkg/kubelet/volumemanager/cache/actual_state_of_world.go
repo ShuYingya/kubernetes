@@ -75,6 +75,12 @@ type ActualStateOfWorld interface {
 	// attached volumes, an error is returned.
 	SetVolumeGloballyMounted(volumeName v1.UniqueVolumeName, globallyMounted bool, devicePath, deviceMountPath string) error
 
+	// Return true if volume is globallyMounted
+	IsVolumeGloballyMounted(volumeName v1.UniqueVolumeName) bool
+
+        // Return true if volume plugin is Attachable
+	IsVolumePluginAttachable(volumeName v1.UniqueVolumeName) bool
+
 	// DeletePodFromVolume removes the given pod from the given volume in the
 	// cache indicating the volume has been successfully unmounted from the pod.
 	// If a pod with the same unique name does not exist under the specified
@@ -492,6 +498,36 @@ func (asw *actualStateOfWorld) SetVolumeGloballyMounted(
 	volumeObj.devicePath = devicePath
 	asw.attachedVolumes[volumeName] = volumeObj
 	return nil
+}
+
+func (asw *actualStateOfWorld) IsVolumePluginAttachable(volumeName v1.UniqueVolumeName) bool {
+        asw.Lock()
+        defer asw.Unlock()
+
+	volumeObj, volumeExists := asw.attachedVolumes[volumeName]
+	if !volumeExists {
+		glog.V(5).Infof(
+			"no volume with the name %q exists in the list of attached volumes when check volume plugin is attachable",
+			volumeName)
+		return false
+	}
+
+	return volumeObj.pluginIsAttachable
+}
+
+func (asw *actualStateOfWorld) IsVolumeGloballyMounted(volumeName v1.UniqueVolumeName) bool {
+	asw.Lock()
+	defer asw.Unlock()
+
+	volumeObj, volumeExists := asw.attachedVolumes[volumeName]
+	if !volumeExists {
+		glog.V(5).Infof(
+			"no volume with the name %q exists in the list of attached volumes when check volume is globally mounted",
+			volumeName)
+		return false
+	}
+
+	return volumeObj.globallyMounted
 }
 
 func (asw *actualStateOfWorld) DeletePodFromVolume(
