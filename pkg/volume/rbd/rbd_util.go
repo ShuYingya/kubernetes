@@ -256,11 +256,15 @@ func (util *RBDUtil) DetachDisk(plugin *rbdPlugin, deviceMountPath string, devic
 	}
 	// rbd unmap
 	exec := plugin.host.GetExec(plugin.GetPluginName())
-	output, err := exec.Run("rbd", "unmap", device)
-	if err != nil {
-		return rbdErrors(err, fmt.Errorf("rbd: failed to unmap device %s, error %v, rbd output: %v", device, err, output))
+	for start := time.Now(); time.Since(start) < 1*time.Minute; time.Sleep(3*time.Second) {
+		output, err := exec.Run("rbd", "unmap", device)
+		if err != nil {
+			return rbdErrors(err, fmt.Errorf("rbd: failed to unmap device %s, error %v, rbd output: %v", device, err, output))
+		} else {
+			glog.V(3).Infof("rbd: successfully unmap device %s", device)
+			break
+		}
 	}
-	glog.V(3).Infof("rbd: successfully unmap device %s", device)
 
 	// Currently, we don't persist rbd info on the disk, but for backward
 	// compatbility, we need to clean it if found.
